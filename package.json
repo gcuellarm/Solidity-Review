@@ -1,0 +1,25 @@
+{
+  "name": "solidity-review",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "solidity-review": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --exclude tests/**/*.node.test.ts",
+    "test:local": "node --test tests/cli.node.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@11.12.1",
+  "devDependencies": {
+    "@types/node": "24.7.2",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}
