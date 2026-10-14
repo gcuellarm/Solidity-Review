@@ -15,6 +15,28 @@ const tools = (missing?: "forge" | "slither"): CliDependencies => ({
   findExecutable: async (name) => name === missing ? undefined : `tools/${name}`,
   readToolVersion: async (executable) => `${path.basename(executable)} 1.2.3`,
   readFoundryConfig: async () => ({ src: "contracts", test: "spec" }),
+  runForgeAnalysis: async () => ({
+    build: {
+      status: "completed",
+      execution: { command: "/tools/forge", args: ["build"], cwd: "/project", exitCode: 0, stdout: "", stderr: "", durationMs: 1, termination: "exit" },
+    },
+    tests: {
+      status: "completed",
+      outcome: "passed",
+      execution: { command: "/tools/forge", args: ["test", "--json"], cwd: "/project", exitCode: 0, stdout: "{}", stderr: "", durationMs: 1, termination: "exit" },
+      summary: { total: 1, passed: 1, failed: 0, skipped: 0, failures: [] },
+    },
+  }),
+  runCoverageAnalysis: async () => ({
+    status: "completed",
+    execution: { command: "/tools/forge", args: ["coverage"], cwd: "/project", exitCode: 0, stdout: "", stderr: "", durationMs: 1, termination: "exit" },
+    reportPath: "/reports/artifacts/coverage.lcov",
+    summary: {
+      files: [],
+      totals: { lines: { covered: 1, total: 1 }, functions: null, branches: null },
+      excluded: [],
+    },
+  }),
 });
 
 const project = async () => {
@@ -25,27 +47,27 @@ const project = async () => {
   return root;
 };
 
-describe("CLI (runner local reproducible)", () => {
-  it("muestra ayuda solo en una invocación válida", async () => {
+describe("CLI (reproducible local runner)", () => {
+  it("shows help only for a valid invocation", async () => {
     const output = capture();
     assert.equal(await runCli(["--help"], tools(), output.io), 0);
-    assert.match(output.stdout.join("\n"), /analyze <ruta> --out <directorio>/);
+    assert.match(output.stdout.join("\n"), /analyze <path> --out <directory>/);
     const invalid = capture();
     assert.equal(await runCli(["comando-inventado", "--help"], tools(), invalid.io), 2);
-    assert.match(invalid.stderr.join("\n"), /comando desconocido/);
+    assert.match(invalid.stderr.join("\n"), /unknown command/);
   });
 
-  it("distingue ruta inexistente y proyecto no Foundry", async () => {
+  it("distinguishes a missing path from a non-Foundry project", async () => {
     const missing = capture();
-    assert.equal(await runCli(["analyze", "/ruta/que/no/existe", "--out", "reports"], tools(), missing.io), 2);
-    assert.match(missing.stderr.join("\n"), /no existe/);
+    assert.equal(await runCli(["analyze", "/path/that/does/not/exist", "--out", "reports"], tools(), missing.io), 2);
+    assert.match(missing.stderr.join("\n"), /does not exist/);
     const root = await mkdtemp(path.join(tmpdir(), "solidity-review-"));
     const incompatible = capture();
     assert.equal(await runCli(["analyze", root, "--out", "reports"], tools(), incompatible.io), 2);
     assert.match(incompatible.stderr.join("\n"), /foundry\.toml/);
   });
 
-  it("resuelve rutas, crea la salida, normaliza ejecutables y muestra versiones", async () => {
+  it("resolves paths, creates output, normalizes executables, and shows versions", async () => {
     const root = await project();
     const outputArgument = path.relative(process.cwd(), path.join(root, "relative-report"));
     const output = capture();
@@ -60,41 +82,41 @@ describe("CLI (runner local reproducible)", () => {
   });
 
   for (const tool of ["forge", "slither"] as const) {
-    it(`informa específicamente si falta ${tool}`, async () => {
+    it(`reports specifically when ${tool} is missing`, async () => {
       const root = await project();
       const output = capture();
       assert.equal(await runCli(["analyze", root, "--out", path.join(root, "reports")], tools(tool), output.io), 2);
-      assert.match(output.stderr.join("\n"), new RegExp(`No se encontró ${tool}`));
+      assert.match(output.stderr.join("\n"), new RegExp(`${tool} was not found`));
     });
   }
 
-  it("rechaza argumentos incompletos", async () => {
+  it("rejects incomplete arguments", async () => {
     const output = capture();
     assert.equal(await runCli(["analyze", "."], tools(), output.io), 2);
     assert.match(output.stderr.join("\n"), /--out/);
   });
 
-  it("rechaza una salida existente que no es directorio", async () => {
+  it("rejects an existing output path that is not a directory", async () => {
     const root = await project();
     const outputFile = path.join(root, "report-file");
     await writeFile(outputFile, "x");
     const output = capture();
     assert.equal(await runCli(["analyze", root, "--out", outputFile], tools(), output.io), 2);
-    assert.match(output.stderr.join("\n"), /salida no es un directorio/);
+    assert.match(output.stderr.join("\n"), /output path is not a directory/);
   });
 
   for (const missingDirectory of ["contracts", "spec"] as const) {
-    it(`rechaza ${missingDirectory} efectivo inexistente`, async () => {
+    it(`rejects missing effective ${missingDirectory}`, async () => {
       const root = await project();
       await rm(path.join(root, missingDirectory), { recursive: true });
       const output = capture();
       assert.equal(await runCli(["analyze", root, "--out", path.join(root, "reports")], tools(), output.io), 2);
-      assert.match(output.stderr.join("\n"), /ruta efectiva.*no existe/);
+      assert.match(output.stderr.join("\n"), /effective.*path does not exist/);
       assert.ok(output.stderr.join("\n").includes(path.join(root, missingDirectory)));
     });
   }
 
-  it("informa si una herramienta existe pero --version falla", async () => {
+  it("reports when a tool exists but --version fails", async () => {
     const root = await project();
     const output = capture();
     const dependencies = tools();
@@ -104,7 +126,7 @@ describe("CLI (runner local reproducible)", () => {
     assert.match(output.stderr.join("\n"), /timeout/);
   });
 
-  it("informa específicamente si forge config --json falla o se cuelga", async () => {
+  it("reports specifically when forge config --json fails or hangs", async () => {
     const root = await project();
     const output = capture();
     const dependencies = tools();

@@ -1,0 +1,9 @@
+{
+  "test/Example.t.sol:ExampleTest": {
+    "test_results": {
+      "testOk()": { "status": "Success" },
+      "testBad()": { "status": "Failure", "reason": "assertion failed" },
+      "testIgnored()": { "status": "Skipped" }
+    }
+  }
+}

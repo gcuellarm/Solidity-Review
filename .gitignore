@@ -4,6 +4,6 @@ coverage/
 reports/
 *.log
 
-# Documentación privada de seguimiento y guía de trabajo
+# Private progress notes and source planning guide
 cuaderno_de_ruta.md
 Guia_desarrollo_Solidity_Review.docx

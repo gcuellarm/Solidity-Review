@@ -1,0 +1,8 @@
+{
+  "test/Example.t.sol:ExampleTest": {
+    "test_results": {
+      "testOk()": { "status": "Success" },
+      "testIgnored()": { "status": "Skipped" }
+    }
+  }
+}
